@@ -18,15 +18,38 @@ Stack (all local, no AWS bill): `floci (S3) → kind (K8s) → Nessie (Iceberg R
 
 Airflow UI: `http://localhost:8080` (admin/admin). Nessie API: `http://localhost:19120`.
 
-DAG `iceberg_taxi_ingest` (@daily): generates synthetic NYC-taxi CSV → `spark-submit` (Iceberg+Nessie packages) → `s3a://lake-warehouse/wh` catalog `nessie.bronze.taxi_trips`.
+DAG `iceberg_taxi_ingest` (@daily): generates synthetic NYC-taxi rows → Spark job → `nessie.bronze.taxi_trips` in `s3://lake-warehouse/wh`.
+
+Trigger one manually:
+
+```bash
+kubectl exec -n data-platform deploy/airflow-scheduler -c scheduler -- \
+  airflow dags trigger iceberg_taxi_ingest -r my_run
+```
+
+Task logs disappear with the executor pod — capture them while running:
+
+```bash
+./scripts/capture-run.sh my_run   # -> /tmp/worker-my_run.log
+```
 
 ## Layout
 
 - `terraform/` — S3 buckets (`lake-raw`, `lake-warehouse`) against floci endpoint
-- `kind/cluster.yaml` — single-node kind cluster
-- `helm/values-airflow.yaml` — Airflow Helm overrides (KubernetesExecutor + spark provider)
-- `k8s/` — namespaces, SparkApplication template
+- `kind/cluster.yaml` — single-node kind cluster (hostPorts 8080, 19120)
+- `helm/values-airflow.yaml` — Airflow overrides (KubernetesExecutor, in-cluster conn)
+- `helm/values-nessie.yaml` — Nessie Iceberg REST backed by floci S3
+- `k8s/` — namespaces, Spark RBAC, api-server NodePort, SparkApplication template
 - `spark/jobs/ingest_taxi.py` — PySpark → Iceberg/Nessie job
 - `spark/Dockerfile` — `apache/spark:3.5.6` + job baked in
-- `dags/iceberg_ingest_dag.py` — Airflow DAG (SparkKubernetesOperator + Sensor)
-- `scripts/` — install/setup/teardown
+- `dags/iceberg_ingest_dag.py` — Airflow DAG
+- `scripts/` — install-tools, setup, teardown, capture-run
+- `FIXES.md` — every error hit and its root cause
+
+## Notes
+
+- Needs ~4GB for Docker Desktop (kind + Airflow + Nessie + Spark). Raise
+  Settings → Resources → Memory if pods get OOMKilled.
+- `setup.sh` is idempotent; re-run it to rebuild after a Docker restart.
+- DAG files must be copied into the dag-processor pod (it owns the
+  `airflow-dags` PVC); `setup.sh` does this.

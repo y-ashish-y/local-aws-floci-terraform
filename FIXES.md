@@ -103,11 +103,57 @@ Each entry: symptom → root cause → fix (already baked into the repo).
   from its own directory.
 
 ## Verified end to end
-- `SparkApplication taxi-ingest-manual13` → `COMPLETED`,
-  driver log `WROTE rows=10000 to nessie.bronze.taxi_trips`,
-  `s3://lake-warehouse/wh/bronze/taxi_trips_*/` holds parquet + avro +
-  `metadata.json` in floci.
 - Airflow UI at http://localhost:8080 (admin/admin).
+- DAG run `final_run_01` -> **success**, 10k rows per run committed as new
+  Iceberg snapshots in `s3://lake-warehouse/wh/bronze/taxi_trips_*/metadata/`.
+
+## 20. Helm upgrade aborted: "conflict with kubectl-patch: .spec.type"
+- Symptom: `UPGRADE FAILED` on `airflow-api-server` after adding the UI patch.
+- Cause: `kubectl patch svc ... type=NodePort` forks the field from Helm's
+  release manifest; three-way merge then fails forever (and `helm upgrade
+  --force` is unsafe under memory pressure).
+- Fix: `k8s/airflow-api-server-nodeport.yaml` — a *separate* NodePort Service
+  selecting the same api-server pods. Helm keeps owning `svc/airflow-api-server`;
+  no patch, no conflict.
+
+## 21. `ds_nodash` undefined -> every real DAG run failed
+- Symptom: task failed in ~5s, executor pod log ends at
+  `Filling up the DagBag ...`, container exits 0.
+  `airflow tasks test` and `tasks render` both PASSED, which is the trap.
+- Real error (only visible in the executor pod's JSON log):
+  `UndefinedError: 'ds_nodash' is undefined`.
+- Cause: `application_name="taxi-ingest-{{ ds_nodash }}"` on the sensor.
+  Manual runs have `logical_date = None`, so there is no data interval and
+  `ds_nodash` never renders. The CLI commands supplied a date explicitly,
+  which is why they passed and hid it.
+- Fix: fixed name `taxi-ingest` (no Jinja) + `random_name_suffix=False` on
+  the operator (it appends a hash otherwise, e.g. `taxi-ingest-ms4v3g7b`, so
+  the sensor's fixed name 404s).
+- Debug tooling: `scripts/capture-run.sh <run_id>` — the KubernetesExecutor
+  deletes the task pod seconds after it finishes, so poll `kubectl logs`
+  continuously and keep the last non-empty read. Reading logs after the fact
+  is impossible; that is what made this take a while.
+
+## 22. Duplicate `/opt/airflow/dags` mount broke the executor
+- Symptom: task failed instantly, no executor pod ever created.
+- Cause: I added `workers.kubernetes.extraVolumeMounts` for the dags PVC, but
+  the chart already mounts `airflow-dags` at `/opt/airflow/dags` in the worker
+  pod template -> duplicate mountPath -> invalid Pod spec.
+- Fix: removed it. The chart's own mount is sufficient; executor pods already
+  see the DAGs PVC (verified in `cm/airflow-config` key `pod_template_file.yaml`).
+
+## 23. Sensor 404s: operator already waits and deletes the SparkApplication
+- Symptom: `submit_taxi_ingest` success (37s, Spark ran), then
+  `sense_taxi_ingest` fails with `404 Not Found`.
+- Cause: `SparkKubernetesOperator.execute()` blocks until the driver
+  terminates and then deletes the SparkApplication — nothing left to sense.
+- Fix: dropped the sensor; single task, failure propagates from it.
+
+### Container logs live on the task pod, not in Airflow
+`Airflow UI -> task -> Logs` for these runs shows
+`Could not read served logs: Hostname not available for worker`, because the
+pod is already gone. Use `scripts/capture-run.sh`, or the API:
+`GET /api/v2/dags/<dag>/dagRuns/<run>/taskInstances/<task>/logs/1`.
 
 ## 14. `days_ago` removed in Airflow 3
 - Symptom: `ImportError: cannot import name 'days_ago'`.

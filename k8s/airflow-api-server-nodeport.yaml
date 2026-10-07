@@ -1,0 +1,19 @@
+# Separate NodePort for the API server: patching svc/airflow-api-server
+# forks its type (ClusterIP -> NodePort) and Helm aborts with
+# "conflict with kubectl-patch: .spec.type". Helm keeps owning that svc;
+# this one rides alongside it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-api-server-nodeport
+  namespace: data-platform
+spec:
+  type: NodePort
+  selector:
+    component: api-server
+    release: airflow
+    tier: airflow
+  ports:
+    - name: api-server
+      port: 8080
+      nodePort: 30080

@@ -20,6 +20,7 @@ kubectl wait --for=condition=Ready node --all --timeout=180s
 
 echo "== namespaces + spark RBAC =="
 kubectl apply -f "$ROOT/k8s/namespaces.yaml"
+kubectl apply -f "$ROOT/k8s/airflow-spark-rbac.yaml"
 kubectl create serviceaccount spark -n data-platform --dry-run=client -o yaml | kubectl apply -f -
 kubectl create clusterrolebinding spark-admin --clusterrole=cluster-admin \
   --serviceaccount=data-platform:spark --dry-run=client -o yaml | kubectl apply -f -
@@ -53,10 +54,10 @@ kubectl create secret generic airflow-webserver-secret -n data-platform \
   --dry-run=client -o yaml | kubectl apply -f -
 helm upgrade --install airflow apache-airflow/airflow -n data-platform \
   -f "$ROOT/helm/values-airflow.yaml" --version 1.22.0
-# Expose the API server on the kind NodePort (chart has no nodePort field).
-# kind forwards node 30080 -> host 8080.
-kubectl patch svc airflow-api-server -n data-platform \
-  -p '{"spec":{"type":"NodePort","ports":[{"name":"api-server","port":8080,"nodePort":30080}]}}' || true
+# Expose the API server on the kind NodePort (chart's apiServer.service has
+# no nodePort field). Separate Service, not a patch: patching forks .spec.type
+# and Helm aborts with "conflict with kubectl-patch".
+kubectl apply -f "$ROOT/k8s/airflow-api-server-nodeport.yaml"
 kubectl rollout status deploy/airflow-scheduler -n data-platform --timeout=600s
 
 echo "== sync DAGs (dag-processor pod mounts the shared PVC; scheduler does not) =="
