@@ -1,0 +1,19 @@
+# Nessie Iceberg REST catalog backed by floci S3 (local AWS emulator).
+catalog:
+  enabled: true
+  iceberg:
+    defaultWarehouse: lake
+    warehouses:
+      - name: lake
+        location: s3://lake-warehouse/wh
+  storage:
+    s3:
+      defaultOptions:
+        region: us-east-1
+        endpoint: http://host.docker.internal:4566
+        pathStyleAccess: true
+        authType: STATIC
+        accessKeySecret:
+          name: nessie-s3-creds
+          awsAccessKeyId: aws_access_key_id
+          awsSecretAccessKey: aws_secret_access_key

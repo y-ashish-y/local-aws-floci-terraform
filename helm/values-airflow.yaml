@@ -1,0 +1,31 @@
+executor: "KubernetesExecutor"
+
+images:
+  airflow:
+    repository: lake-airflow
+    tag: 3.2.2-spark
+    pullPolicy: IfNotPresent
+
+env:
+  - name: AIRFLOW__CORE__LOAD_EXAMPLES
+    value: "False"
+
+extraPipPackages:
+  - "apache-airflow-providers-apache-spark[cncf.kubernetes]"
+
+webserverSecretKeySecretName: airflow-webserver-secret
+
+postgresql:
+  enabled: true
+
+web:
+  service:
+    type: NodePort
+    nodePort: 30080
+
+dags:
+  persistence:
+    enabled: true
+    existingClaim: ""
+  gitSync:
+    enabled: false

@@ -1,0 +1,35 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: taxi-ingest-{{ ds_nodash }}
+  namespace: data-platform
+spec:
+  type: Python
+  mode: cluster
+  image: lake-spark:3.5-iceberg
+  imagePullPolicy: IfNotPresent
+  mainApplicationFile: local:///opt/spark/jobs/ingest_taxi.py
+  arguments:
+    - --nessie-uri=http://nessie.nessie:19120/iceberg/
+    - --s3-endpoint=http://host.docker.internal:4566
+    - --rows=10000
+  sparkVersion: 3.5.6
+  restartPolicy:
+    type: Never
+  driver:
+    cores: 1
+    memory: 1g
+    serviceAccount: spark
+  executor:
+    cores: 1
+    instances: 1
+    memory: 1g
+  deps:
+    jars:
+      - https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.10.0/iceberg-spark-runtime-3.5_2.12-1.10.0.jar
+      - https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-aws-bundle/1.10.0/iceberg-aws-bundle-1.10.0.jar
+  hadoopConf:
+    fs.s3a.endpoint: http://host.docker.internal:4566
+    fs.s3a.access.key: test
+    fs.s3a.secret.key: test
+    fs.s3a.path.style.access: "true"

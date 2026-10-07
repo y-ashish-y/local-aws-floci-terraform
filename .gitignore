@@ -1,0 +1,10 @@
+__pycache__/
+.terraform/
+*.tfstate*
+*.tfstate.backup
+kind/kubeconfig
+data/
+# skills installer working dirs (restorable via skills-lock.json)
+.agents/
+.claude/
+agent/
