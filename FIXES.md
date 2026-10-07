@@ -82,14 +82,17 @@ Each entry: symptom → root cause → fix (already baked into the repo).
   `spark.sql.catalog.nessie.ref=main`, so `main` was parsed as a namespace.
 - Fix: address `nessie.bronze.taxi_trips`.
 
-## 12. Scheduler lacks the Spark provider
-- Symptom: `ModuleNotFoundError: No module named 'airflow.providers.apache'`
-  in scheduler; DAG never parses.
-- Cause: chart `extraPipPackages` installs into worker pods only, not the
-  scheduler/dag-processor.
-- Fix: `docker/airflow/Dockerfile` (`FROM apache/airflow:3.2.2` + pip
-  install spark provider), referenced in `helm/values-airflow.yaml`
-  (`images.airflow: lake-airflow:3.2.2-spark`).
+## 12. Scheduler lacks the Spark provider -> use stock image + cncf provider
+- Symptom: `ModuleNotFoundError: No module named 'airflow.providers.apache'`.
+- Cause: chart `extraPipPackages` installs into worker pods only.
+- First attempt (reverted): custom `docker/airflow` image with the spark
+  provider baked in. Abandoned because provider v6/5.x/4.x no longer ships
+  `operators.spark_kubernetes` at all (verified absent in 6.3.2, 5.6.0,
+  4.9.0) — it moved to `airflow.providers.cncf.kubernetes`, which is
+  already in the stock `apache/airflow:3.2.2` image.
+- Fix: DAG imports from
+  `airflow.providers.cncf.kubernetes.{operators,sensors}.spark_kubernetes`;
+  no custom image, stock chart image.
 
 ## 13. DAG files copied to the wrong pod
 - Symptom: dag-processor stats show 0 files, DAG never appears.
@@ -104,3 +107,43 @@ Each entry: symptom → root cause → fix (already baked into the repo).
   driver log `WROTE rows=10000 to nessie.bronze.taxi_trips`,
   `s3://lake-warehouse/wh/bronze/taxi_trips_*/` holds parquet + avro +
   `metadata.json` in floci.
+- Airflow UI at http://localhost:8080 (admin/admin).
+
+## 14. `days_ago` removed in Airflow 3
+- Symptom: `ImportError: cannot import name 'days_ago'`.
+- Fix: `start_date=pendulum.datetime(2026, 10, 7, tz="UTC")`.
+
+## 15. `application_file` takes a path, not a dict
+- Symptom: `AttributeError: 'dict' object has no attribute 'rstrip'` in
+  `manage_template_specs`.
+- Cause: this provider version only accepts a path string (or raw YAML
+  string) for `application_file`; file content is not Jinja-rendered.
+- Fix: pass the loaded dict via `template_spec` instead — it IS a
+  rendered template field, so `{{ ds_nodash }}` in the app name resolves
+  per run.
+
+## 16. Missing `kubernetes_default` connection
+- Symptom: submit task fails in seconds.
+- Fix: `helm/values-airflow.yaml` sets
+  `AIRFLOW_CONN_KUBERNETES_DEFAULT='{"conn_type":"kubernetes","extra":{"in_cluster":true}}'`.
+
+## 17. Airflow SAs forbidden from creating SparkApplications
+- Symptom: `403 ... airflow-scheduler cannot create resource
+  sparkapplications`.
+- Fix: `k8s/airflow-spark-rbac.yaml` (ClusterRole + binding for
+  `airflow-scheduler`/`airflow-worker`); applied in `scripts/setup.sh`.
+
+## 18. Airflow UI not reachable on localhost:8080
+- Symptom: `curl localhost:8080` → 000; `svc/airflow-api-server` is
+  `ClusterIP` (chart `web.service` values don't apply to Airflow 3's
+  api-server, and its `apiServer.service` block has no nodePort field).
+- Fix: `kubectl patch svc airflow-api-server` to `NodePort 30080`
+  (kind forwards node 30080 → host 8080); step added to `scripts/setup.sh`.
+
+## 19. Nessie OOMKilled on a 3.5GB Docker Desktop VM
+- Symptom: `Reason: OOMKilled, Exit 137`, `docker info` shows
+  `Total Memory: 3.52GiB` while the stack needs ~5GB at Spark-run peaks.
+- Fix (fit the box): `JAVA_OPTS_APPEND=-Xmx768m` for Nessie
+  (`helm/values-nessie.yaml`), Spark driver/executor `1g` → `768m`
+  (`k8s/spark-application-template.yaml`). Long term: raise Docker
+  Desktop memory.

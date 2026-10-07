@@ -1,14 +1,10 @@
 executor: "KubernetesExecutor"
 
-images:
-  airflow:
-    repository: lake-airflow
-    tag: 3.2.2-spark
-    pullPolicy: IfNotPresent
-
 env:
   - name: AIRFLOW__CORE__LOAD_EXAMPLES
     value: "False"
+  - name: AIRFLOW_CONN_KUBERNETES_DEFAULT
+    value: '{"conn_type": "kubernetes", "extra": {"in_cluster": true}}'
 
 extraPipPackages:
   - "apache-airflow-providers-apache-spark[cncf.kubernetes]"

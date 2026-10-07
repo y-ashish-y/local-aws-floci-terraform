@@ -18,12 +18,12 @@ spec:
     type: Never
   driver:
     cores: 1
-    memory: 1g
+    memory: 768m
     serviceAccount: spark
   executor:
     cores: 1
     instances: 1
-    memory: 1g
+    memory: 768m
   deps:
     jars:
       - https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_2.12/1.10.0/iceberg-spark-runtime-3.5_2.12-1.10.0.jar

@@ -28,10 +28,6 @@ echo "== spark image (job baked in) =="
 docker build -t lake-spark:3.5-iceberg "$ROOT/spark"
 kind load docker-image lake-spark:3.5-iceberg --name lakehouse
 
-echo "== airflow image (spark provider baked in) =="
-docker build -t lake-airflow:3.2.2-spark "$ROOT/docker/airflow"
-kind load docker-image lake-airflow:3.2.2-spark --name lakehouse
-
 echo "== helm repos =="
 helm repo add apache-airflow https://airflow.apache.org 2>/dev/null || true
 helm repo add spark-operator https://kubeflow.github.io/spark-operator 2>/dev/null || true
@@ -57,6 +53,10 @@ kubectl create secret generic airflow-webserver-secret -n data-platform \
   --dry-run=client -o yaml | kubectl apply -f -
 helm upgrade --install airflow apache-airflow/airflow -n data-platform \
   -f "$ROOT/helm/values-airflow.yaml" --version 1.22.0
+# Expose the API server on the kind NodePort (chart has no nodePort field).
+# kind forwards node 30080 -> host 8080.
+kubectl patch svc airflow-api-server -n data-platform \
+  -p '{"spec":{"type":"NodePort","ports":[{"name":"api-server","port":8080,"nodePort":30080}]}}' || true
 kubectl rollout status deploy/airflow-scheduler -n data-platform --timeout=600s
 
 echo "== sync DAGs (dag-processor pod mounts the shared PVC; scheduler does not) =="

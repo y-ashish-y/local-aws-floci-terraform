@@ -1,4 +1,8 @@
 # Nessie Iceberg REST catalog backed by floci S3 (local AWS emulator).
+# Heap capped: single-node kind on a 3.5GB Docker Desktop VM OOMKills otherwise.
+extraEnv:
+  - name: JAVA_OPTS_APPEND
+    value: -Xmx768m
 catalog:
   enabled: true
   iceberg:
