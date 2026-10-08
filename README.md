@@ -1,5 +1,7 @@
 # local_aws_floci_terraform
 
+![CI](https://github.com/y-ashish-y/local-aws-floci-terraform/actions/workflows/ci.yml/badge.svg)
+
 A **complete lakehouse on your laptop** — a fake AWS, a real Kubernetes cluster, and a scheduled data pipeline that lands daily data in an Apache Iceberg lake. Everything is local, nothing costs a cent, and no cloud credentials exist.
 
 ```
