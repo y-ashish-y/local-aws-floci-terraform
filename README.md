@@ -1,4 +1,10 @@
-# local_aws_floci_terraform
+# Local AWS Lakehouse — Terraform + Airflow + Spark + Iceberg
+
+![Terraform](https://img.shields.io/badge/Terraform-7B42BC?logo=terraform&logoColor=white)
+![Apache Airflow](https://img.shields.io/badge/Apache_Airflow-017CEE?logo=apacheairflow&logoColor=white)
+![Apache Spark](https://img.shields.io/badge/Apache_Spark-E25A1C?logo=apachespark&logoColor=white)
+![Apache Iceberg](https://img.shields.io/badge/Apache_Iceberg-0882be)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?logo=kubernetes&logoColor=white)
 
 Local AWS lakehouse on [floci](https://floci.io/) (LocalStack replacement, `:4566`) + Terraform + kind + Airflow + Spark + Iceberg (Nessie).
 
