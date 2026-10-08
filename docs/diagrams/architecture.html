@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Local lakehouse architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f5f5f5;   /* white-smoke */
+      --color-ink:     #2d3142;   /* jet-black */
+      --color-muted:   #4f5d75;   /* blue-slate */
+      --color-accent:  #eb6c36;   /* atomic-tangerine */
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', 'Noto Serif KR', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1320px; width: 100%; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Architecture · local AWS lakehouse</p>
+    <h1>What runs where on your laptop</h1>
+
+    <svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="arch-title arch-desc">
+      <title id="arch-title">Local lakehouse architecture</title>
+      <desc id="arch-desc">Architecture diagram showing how your browser, Terraform, a local S3 emulator (floci) and a local Kubernetes cluster (kind) host Airflow, a Spark operator, Spark pods and the Nessie Iceberg catalog, and how they connect to the S3 buckets that store the lake.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+      <!-- ZONES (before arrows and nodes) -->
+      <rect x="336" y="64" width="608" height="312" rx="8" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <rect x="352" y="68" width="128" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="416" y="77" fill="rgba(45,49,66,0.40)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">KIND CLUSTER 'LAKEHOUSE'</text>
+
+      <!-- ARROWS (before nodes) -->
+      <!-- a1: browser -> airflow (HTTP) -->
+      <line x1="272" y1="128" x2="368" y2="128" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+
+      <!-- a2: airflow -> spark operator -->
+      <line x1="592" y1="128" x2="648" y2="128" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="596" y="108" width="56" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="624" y="116" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SUBMIT CR</text>
+
+      <!-- a3: spark operator -> pods -->
+      <line x1="788" y1="160" x2="788" y2="288" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="804" y="212" width="64" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="836" y="220" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">SPAWN PODS</text>
+
+      <!-- a4: pods -> nessie (commit) -->
+      <line x1="656" y1="320" x2="592" y2="320" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="608" y="300" width="40" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="628" y="308" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">COMMIT</text>
+
+      <!-- a5: nessie -> floci S3 (elbow rail y=408) -->
+      <path d="M 480,352 V 400 Q 480,408 472,408 H 160 Q 152,408 152,416 V 456"
+            fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="288" y="388" width="56" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="316" y="396" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">S3 FILES</text>
+
+      <!-- a6: pods -> floci S3 (elbow rail y=436) -->
+      <path d="M 788,352 V 428 Q 788,436 780,436 H 264 Q 256,436 256,444 V 456"
+            fill="none" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="496" y="416" width="64" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="528" y="424" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">DATA FILES</text>
+
+      <!-- a7: terraform -> floci (one-time, dashed) -->
+      <line x1="384" y1="496" x2="304" y2="496" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <rect x="328" y="476" width="40" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="348" y="484" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">APPLY</text>
+
+      <!-- NODES -->
+      <!-- N1: your browser (input) -->
+      <rect x="48" y="96" width="224" height="64" rx="6" fill="rgba(79,93,117,0.10)" stroke="#7a8399" stroke-width="1"/>
+      <text x="160" y="122" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Your browser</text>
+      <text x="160" y="138" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">localhost:8080</text>
+
+      <!-- N2: airflow (backend) -->
+      <rect x="368" y="96" width="224" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="480" y="120" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Airflow</text>
+      <text x="480" y="136" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">KubernetesExecutor · Postgres</text>
+
+      <!-- N3: spark operator (backend) -->
+      <rect x="656" y="96" width="264" height="64" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="788" y="120" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Spark Operator</text>
+      <text x="788" y="136" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">watches data-platform</text>
+
+      <!-- N4: nessie (focal) -->
+      <rect x="368" y="288" width="224" height="64" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="480" y="312" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Nessie</text>
+      <text x="480" y="328" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Iceberg REST · :19120</text>
+
+      <!-- N5: spark pods (ephemeral, dashed) -->
+      <rect x="656" y="288" width="264" height="64" rx="6" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="788" y="312" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Spark driver + executors</text>
+      <text x="788" y="328" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">lake-spark:3.5-iceberg</text>
+
+      <!-- N6: floci (focal store) -->
+      <rect x="48" y="464" width="256" height="80" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="176" y="492" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">floci (local S3)</text>
+      <text x="176" y="510" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">AWS emulator · :4566</text>
+      <text x="176" y="526" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">lake-raw · lake-warehouse</text>
+
+      <!-- N7: terraform (one-time, dashed) -->
+      <rect x="384" y="464" width="192" height="64" rx="6" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="4,3"/>
+      <text x="480" y="490" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Terraform</text>
+      <text x="480" y="506" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">creates the 2 buckets</text>
+
+      <!-- LEGEND (bottom strip) -->
+      <line x1="32" y1="664" x2="1248" y2="664" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
+      <text x="32" y="686" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.14em">LEGEND</text>
+
+      <rect x="112" y="674" width="28" height="14" rx="2" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="0.8"/>
+      <text x="148" y="685" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">FOCAL</text>
+
+      <rect x="232" y="674" width="28" height="14" rx="2" fill="rgba(45,49,66,0.02)" stroke="rgba(45,49,66,0.30)" stroke-width="0.8" stroke-dasharray="4,3"/>
+      <text x="268" y="685" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">EPHEMERAL / ONE-TIME</text>
+
+      <line x1="504" y1="681" x2="544" y2="681" stroke="#2e5aa8" stroke-width="1.2" marker-end="url(#arrow-link)"/>
+      <text x="556" y="685" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">HTTP</text>
+
+      <line x1="648" y1="681" x2="688" y2="681" stroke="#4f5d75" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
+      <text x="700" y="685" fill="#4f5d75" font-size="8" font-family="'Geist Mono', monospace">BOOTSTRAP ONLY</text>
+    </svg>
+  </div>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>One DAG run: trigger to Iceberg snapshot</title>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+KR:wght@400;500;600&family=Noto+Serif+KR:wght@400&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-paper:   #f5f5f5;   /* white-smoke */
+      --color-ink:     #2d3142;   /* jet-black */
+      --color-muted:   #4f5d75;   /* blue-slate */
+      --color-accent:  #eb6c36;   /* atomic-tangerine */
+      --font-sans:     'Geist', system-ui, sans-serif;
+      --font-serif:    'Instrument Serif', 'Noto Serif KR', serif;
+      --font-mono:     'Geist Mono', ui-monospace, monospace;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-paper);
+      color: var(--color-ink);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .frame { max-width: 1320px; width: 100%; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--color-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(1.5rem, 2.4vw + 0.75rem, 2rem);
+      font-weight: 400;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-ink);
+      margin-bottom: 1.5rem;
+    }
+
+    svg { width: 100%; min-width: 900px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="frame">
+    <p class="eyebrow">Flowchart · DAG iceberg_taxi_ingest</p>
+    <h1>What happens in one data run</h1>
+
+    <svg viewBox="0 0 1280 720" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dataflow-title dataflow-desc">
+      <title id="dataflow-title">One DAG run: trigger to Iceberg snapshot</title>
+      <desc id="dataflow-desc">Flowchart of one run of the iceberg_taxi_ingest DAG: Airflow submits a SparkApplication, Spark pods generate taxi rows and write Parquet and metadata files to the local S3 emulator, Nessie commits a new Iceberg snapshot on main, and the task then succeeds or fails depending on the driver's exit code.</desc>
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker>
+        <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/></marker>
+        <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker>
+      </defs>
+
+      <rect width="100%" height="100%" fill="#f5f5f5"/>
+
+      <!-- ARROWS (before nodes) -->
+      <line x1="640" y1="152" x2="640" y2="200" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="640" y1="256" x2="640" y2="304" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="640" y1="360" x2="640" y2="408" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="640" y1="464" x2="640" y2="512" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <line x1="640" y1="568" x2="640" y2="592" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+      <!-- YES branch: diamond right vertex -> success oval -->
+      <line x1="712" y1="628" x2="760" y2="628" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="720" y="608" width="32" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="736" y="616" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">YES</text>
+
+      <!-- NO branch: diamond left vertex -> fail oval -->
+      <line x1="568" y1="628" x2="524" y2="628" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#arrow)"/>
+      <rect x="530" y="608" width="32" height="12" rx="2" fill="#f5f5f5"/>
+      <text x="546" y="616" fill="#7a8399" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">NO</text>
+
+      <!-- NODES -->
+      <!-- start oval -->
+      <rect x="496" y="96" width="288" height="56" rx="20" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="640" y="118" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">@daily or manual run</text>
+      <text x="640" y="134" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">Airflow scheduler</text>
+
+      <!-- submit step -->
+      <rect x="472" y="200" width="336" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="640" y="224" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">submit_taxi_ingest task</text>
+      <text x="640" y="240" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">creates SparkApplication CR</text>
+
+      <!-- pods step -->
+      <rect x="472" y="304" width="336" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="640" y="328" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Driver + executors start</text>
+      <text x="640" y="344" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">image lake-spark:3.5-iceberg</text>
+
+      <!-- files step -->
+      <rect x="472" y="408" width="336" height="56" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="640" y="432" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Write Iceberg files</text>
+      <text x="640" y="448" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">10k rows · Parquet + metadata → floci S3</text>
+
+      <!-- commit step (focal) -->
+      <rect x="472" y="512" width="336" height="56" rx="6" fill="rgba(235,108,54,0.08)" stroke="#eb6c36" stroke-width="1"/>
+      <text x="640" y="536" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Nessie atomic commit</text>
+      <text x="640" y="552" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">new snapshot on ref main</text>
+
+      <!-- decision diamond -->
+      <path d="M 640,592 L 712,628 L 640,664 L 568,628 Z" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="640" y="632" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">driver exit 0?</text>
+
+      <!-- success terminal oval -->
+      <rect x="760" y="604" width="232" height="48" rx="20" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="876" y="626" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Task succeeds</text>
+      <text x="876" y="642" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">snapshot on main</text>
+
+      <!-- fail terminal oval -->
+      <rect x="288" y="604" width="232" height="48" rx="20" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
+      <text x="404" y="626" fill="#2d3142" font-size="12" font-weight="600" font-family="'Geist', sans-serif" text-anchor="middle">Task fails</text>
+      <text x="404" y="642" fill="#4f5d75" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">logs: capture-run.sh</text>
+
+      <!-- side note on ephemeral pods -->
+      <path d="M 820,332 Q 900,344 972,416" fill="none" stroke="rgba(45,49,66,0.30)" stroke-width="1"/>
+      <ellipse cx="820" cy="332" rx="3" ry="3" fill="rgba(45,49,66,0.30)"/>
+      <text x="984" y="428" fill="#7a8399" font-size="14" font-style="italic" font-family="'Instrument Serif', serif" text-anchor="start">operator deletes the pods</text>
+      <text x="984" y="446" fill="#7a8399" font-size="14" font-style="italic" font-family="'Instrument Serif', serif" text-anchor="start">when the driver exits — logs</text>
+      <text x="984" y="464" fill="#7a8399" font-size="14" font-style="italic" font-family="'Instrument Serif', serif" text-anchor="start">vanish unless captured live</text>
+    </svg>
+  </div>
+</body>
+</html>
